@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fafnir Search</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: #2E3440;
+            --text-color: #D8DEE9;
+            --input-bg: #3B4252;
+            --input-text: #ECEFF4;
+            --accent: #88C0D0;
+            --link-color: #88C0D0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--background);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .live-clock {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .history-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            color: var(--accent);
+            cursor: pointer;
+        }
+
+        .history {
+            display: none;
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            background: var(--input-bg);
+            padding: 10px;
+            border-radius: 5px;
+            width: 200px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .history.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .history ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .history li {
+            background: var(--input-bg);
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .history li:hover {
+            background: var(--accent);
+            color: var(--background);
+        }
+
+        .history h3 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .clear-link {
+            color: var(--link-color);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .container {
+    display: flex;
+    align-items: center;
+    background: var(--input-bg);
+    border-radius: 30px;
+    padding: 12px 16px;
+    width: 320px;
+    border: 2px solid var(--accent);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.container:hover,
+.container:focus-within {
+    box-shadow: 0 0 15px var(--accent);
+    width: 400px;
+}
+
+        .icon {
+            font-size: 24px;
+            color: var(--accent);
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+        .input-field {
+            flex-grow: 1;
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--input-text);
+            font-size: 16px;
+            padding: 8px;
+        }
+
+        .autocomplete-items {
+            position: absolute;
+            top: 55px;
+            left: 0;
+            right: 0;
+            background: var(--input-bg);
+            border-radius: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 1;
+        }
+
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .autocomplete-items div:hover {
+            background: var(--accent);
+            color: var(--background);
+        }
+
+        .search-options {
+            margin-top: 10px;
+        }
+
+        .search-options select {
+            padding: 5px;
+            border-radius: 5px;
+            border: none;
+            background: var(--input-bg);
+            color: var(--input-text);
+        }
+    </style>
+</head>
+<body>
+    <div class="live-clock" id="liveClock"></div>
+    <span class="history-button material-icons" onclick="toggleHistory()">history</span>
+    <div class="history" id="historyContainer">
+        <h3>
+            Search History
+            <span class="clear-link" onclick="clearHistory()">Clear</span>
+        </h3>
+        <ul id="historyList"></ul>
+    </div>
+    <div class="title">Fafnir</div>
+    <div class="container">
+        <span class="icon material-icons">search</span>
+        <input type="text" class="input-field" id="searchInput" placeholder="Search..." autocomplete="off">
+        <div class="autocomplete-items" id="autocompleteContainer"></div>
+    </div>
+    <div class="search-options">
+        <label for="searchEngine">Search with: </label>
+        <select id="searchEngine">
+            <option value="https://search.brave.com/search?q=">Brave</option>
+            <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+        </select>
+    </div>
+    <script>
+        function fetchSuggestions(query) {
+            const url = `https://api.duckduckgo.com/?q=${query}&format=json&pretty=1&no_redirect=1&no_html=1&t=h_&skip_disambig=1`;
+            return fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.RelatedTopics) {
+                        return data.RelatedTopics.map(item => item.Text);
+                    } else {
+                        return [];
+                    }
+                });
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('liveClock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        const searchInput = document.getElementById('searchInput');
+        const searchEngine = document.getElementById('searchEngine');
+        const historyList = document.getElementById('historyList');
+        const historyContainer = document.getElementById('historyContainer');
+        const autocompleteContainer = document.getElementById('autocompleteContainer');
+
+        function toggleHistory() {
+            if (historyContainer.classList.contains('show')) {
+                setTimeout(() => {
+                    historyContainer.style.display = 'none';
+                }, 300);
+            } else {
+                historyContainer.style.display = 'block';
+            }
+            setTimeout(() => {
+                historyContainer.classList.toggle('show');
+            }, 0);
+        }
+
+        function updateHistory(query) {
+            let history = JSON.parse(localStorage.getItem('searchHistory')) || [];
+            if (!history.includes(query)) {
+                history.unshift(query);
+                if (history.length > 5) history.pop();
+                localStorage.setItem('searchHistory', JSON.stringify(history));
+            }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            historyList.innerHTML = '';
+            let history = JSON.parse(localStorage.getItem('searchHistory')) || [];
+            history.forEach(query => {
+                let li = document.createElement('li');
+                li.textContent = query;
+                li.addEventListener('click', () => {
+                    searchInput.value = query;
+                });
+                historyList.appendChild(li);
+            });
+        }
+
+        function closeAllLists() {
+            autocompleteContainer.innerHTML = '';
+        }
+
+        function autocomplete(val) {
+            closeAllLists();
+            if (!val) return false;
+
+            fetchSuggestions(val).then(suggestions => {
+                suggestions.forEach(suggestion => {
+                    let suggestionElement = document.createElement('div');
+                    suggestionElement.textContent = suggestion;
+                    suggestionElement.addEventListener('click', () => {
+                        searchInput.value = suggestion;
+                        closeAllLists();
+                    });
+                    autocompleteContainer.appendChild(suggestionElement);
+                });
+            });
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('searchHistory');
+            renderHistory();
+        }
+
+        searchInput.addEventListener('input', function() {
+            autocomplete(this.value);
+        });
+
+        searchInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                const query = encodeURIComponent(this.value);
+                const engine = searchEngine.value;
+                updateHistory(this.value);
+                window.location.href = engine + query;
+            }
+        });
+
+        document.addEventListener('click', function (e) {
+            if (e.target !== searchInput) {
+                closeAllLists();
+            }
+        });
+
+        renderHistory();
+
+        window.onload = function() {
+            searchInput.focus();
+        }
+    </script>
+</body>
+</html>
