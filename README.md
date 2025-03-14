@@ -20,7 +20,7 @@ Fafnir Search is a fork of the ObscurX search UI, redesigned with a Nord-themed 
 3. Start searching!
 
 ## Alternative Usage
-You can also use Fafnir from [the GitHub hosted](https://muffin717.github.io/fafnir/) version.
+You can also use Fafnir from [the GitHub hosted version](https://muffin717.github.io/fafnir/).
 
 ## Customization
 
