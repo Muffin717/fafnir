@@ -19,6 +19,9 @@ Fafnir Search is a fork of the ObscurX search UI, redesigned with a Nord-themed 
 2. Open `index.html` in a browser.
 3. Start searching!
 
+## ALternative Usage
+You can also use Fafnir from [the GitHub hosted](https://muffin717.github.io/fafnir/) version.
+
 ## Customization
 
 - To change the color scheme, modify the `:root` variables in the CSS section.
